@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mini CRM</title>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(to right, #667eea, #764ba2);
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            margin: 30px auto;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            padding: 8px 12px;
+            margin: 5px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            color: white;
+        }
+
+        .add-btn {
+            background: #667eea;
+            width: 100%;
+        }
+
+        .contacted {
+            background: green;
+        }
+
+        .converted {
+            background: orange;
+        }
+
+        .note-btn {
+            background: #444;
+        }
+
+        .delete {
+            background: red;
+        }
+
+        .lead-card {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            transition: transform 0.2s;
+            border-left: 5px solid #667eea;
+        }
+
+        .lead-card:hover {
+            transform: scale(1.02);
+        }
+
+        .status {
+            font-weight: bold;
+            color: #555;
+        }
+
+        .notes {
+            font-style: italic;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- ADD LEAD -->
+    <div class="card">
+        <h2>Add Lead</h2>
+
+        <input id="name" placeholder="Name">
+        <input id="email" placeholder="Email">
+        <input id="source" placeholder="Source">
+
+        <button class="add-btn" onclick="addLead()">Add Lead</button>
+    </div>
+
+    <!-- LEADS LIST -->
+    <div class="card">
+        <h2>Leads</h2>
+        <div id="list"></div>
+    </div>
+
+</div>
+
+<script>
+
+// ADD LEAD (FIXED)
+async function addLead() {
+    const nameVal = document.getElementById("name").value;
+    const emailVal = document.getElementById("email").value;
+    const sourceVal = document.getElementById("source").value;
+
+    if (!nameVal || !emailVal) {
+        alert("Please enter all fields");
+        return;
+    }
+
+    await fetch('http://localhost:5000/leads', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+            name: nameVal,
+            email: emailVal,
+            source: sourceVal
+        })
+    });
+
+    loadLeads();
+}
+
+// LOAD LEADS
+async function loadLeads() {
+    const res = await fetch('http://localhost:5000/leads');
+    const data = await res.json();
+
+    list.innerHTML = "";
+
+    data.forEach(l => {
+        list.innerHTML += `
+        <div class="lead-card">
+            <h3>${l.name}</h3>
+            <p>${l.email}</p>
+            <p>Source: ${l.source}</p>
+            <p class="status">Status: ${l.status}</p>
+            <p class="notes">Notes: ${l.notes || "No notes"}</p>
+
+            <input id="note-${l._id}" placeholder="Add note">
+
+            <button class="note-btn" onclick="addNote('${l._id}')">Save Note</button>
+            <button class="contacted" onclick="updateStatus('${l._id}','contacted')">Contacted</button>
+            <button class="converted" onclick="updateStatus('${l._id}','converted')">Converted</button>
+            <button class="delete" onclick="deleteLead('${l._id}')">Delete</button>
+        </div>
+        `;
+    });
+}
+
+// UPDATE STATUS
+async function updateStatus(id, status) {
+    await fetch(`http://localhost:5000/leads/${id}/status`, {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({status})
+    });
+    loadLeads();
+}
+
+// ADD NOTE
+async function addNote(id) {
+    const note = document.getElementById(`note-${id}`).value;
+
+    await fetch(`http://localhost:5000/leads/${id}/notes`, {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({notes: note})
+    });
+
+    loadLeads();
+}
+
+// DELETE LEAD
+async function deleteLead(id) {
+    if (!confirm("Are you sure you want to delete this lead?")) return;
+
+    await fetch(`http://localhost:5000/leads/${id}`, {
+        method: 'DELETE'
+    });
+
+    loadLeads();
+}
+
+// LOAD DATA
+loadLeads();
+
+</script>
+
+</body>
+</html>
